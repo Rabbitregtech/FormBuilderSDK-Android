@@ -74,7 +74,8 @@ val appearance = FBAppearance(
    toastFont = R.font.momoregular,                                              // Font of the directions text during KYC 
    toastTextSize = 16,                                                          // Text size of the directions text during KYC
    toastTextColor = ContextCompat.getColor(this, R.color.white),                // Text color of the directions text during KYC
-   
+
+   consentTextSize = 16,                                                        // Text size of the consent view checkbox text
    textFont = R.font.momoregular,                                               // Font of the text that is displayed only (not editable text)    
    viewTextSize = 16,                                                           // Text size of the text that is displayed only (not editable text)
    viewTextColor = ContextCompat.getColor(this, R.color.purple_500),            // Color of the text that is displayed only (not editable text)
