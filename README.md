@@ -8,10 +8,13 @@
 4. In the project level settings.gradle file, add include(":FormBuilderSDK") under include(":app") or include(":app", ":FormBuilderSDK")
 5. In the app module build.gradle, add the following line in the dependencies section implementation(project(":FormBuilderSDK"))
 6. Check the app module build.gradle (from step 5) if you have the following dependencies in your project:\
-   implementation( "androidx.core:core-ktx:1.13.1")\
-   implementation( "io.insert-koin:koin-android:3.5.6")\
-   implementation( "com.squareup.retrofit2:converter-gson:2.9.0")\
-   implementation( "com.squareup.okhttp3:logging-interceptor:4.9.2")\
+   implementation("androidx.core:core-ktx:1.13.1")\
+   implementation("io.insert-koin:koin-android:3.5.6")\
+   implementation("com.squareup.retrofit2:converter-gson:2.9.0")\
+   implementation("com.squareup.okhttp3:logging-interceptor:4.9.2")\
+   implementation("com.vanniktech:android-image-cropper:4.7.0")\
+   implementation("androidx.browser:browser:1.8.0")\
+   implementation("com.github.bumptech.glide:glide:4.12.0")\
    If not please add them.
 7. Sync the project and do a clean rebuild
 8. Now you can proceed to the "How to use ?" section
@@ -49,32 +52,25 @@ FBDocDataFragment.ProcessResult.getProcessResultCallback { success ->
    if (success)
    //Do something on success
    else
-   //Do something on failed
+   // Do something on failed process
 }
 ```
 
 Calling getProcessResultCallback tells you if the started process finished successfully or if there was an error with the process
 
-```kotlin
- FormFragment.ProcessResult.postToHostUI { status ->
-    // Parameter status - the status from the SDK
-}
-```
-
-postToHostUI is called when a field with a specific type is received
-
 Optionally, you can pass an FBAppearance object in the intent.putExtra when starting the FormBuilder SDK, with which you can configure the appearance of the labels, fields, buttons:
 
 ```kotlin
 val appearance = FBAppearance(
+   statusBarColor = ContextCompat.getColor(this, R.color.teal_700),             // Color of the status bar
    statusBarTextDark = false,                                                   // Color for the status bar text (false - white, true - black)
-
+    
    backgroundColor = ContextCompat.getColor(this, R.color.teal_700),            // Background of all screens in the SDK
 
    toastFont = R.font.momoregular,                                              // Font of the directions text during KYC 
    toastTextSize = 16,                                                          // Text size of the directions text during KYC
    toastTextColor = ContextCompat.getColor(this, R.color.white),                // Text color of the directions text during KYC
-
+   
    consentTextSize = 16,                                                        // Text size of the consent view checkbox text
    textFont = R.font.momoregular,                                               // Font of the text that is displayed only (not editable text)    
    viewTextSize = 16,                                                           // Text size of the text that is displayed only (not editable text)
@@ -86,7 +82,7 @@ val appearance = FBAppearance(
    inputTextColor = ContextCompat.getColor(this, R.color.white),                // Color of input text field
    inputBackgroundColor = ContextCompat.getColor(this, R.color.purple_500),     // Background color of editable text field
    
-   buttonFont = R.font.momoBold,                                                // Font of the button text
+   buttonFont = R.font.momoregular,                                             // Font of the button text
    buttonTextSize = 16,                                                         // Text size of the button text
    buttonCornerRadius = 30f,                                                    // Corner radius of buttons (0f for square button, anything above 0f makes corners rounded)
    buttonTextColor = ContextCompat.getColor(this, R.color.color_blue),          // Color of the button text
@@ -104,3 +100,53 @@ intent.putExtra("appearance", appearance)
 startActivity(intent)
 ```
 If you don’t pass an appearance object or a certain property, the SDK will use default values.
+
+---
+
+## Deeplinking (Android App Links for IBAN Verification)
+
+If your verification flow includes the **IBAN Verification / Open Banking step**, users will be redirected to their banking app or mobile web banking to authenticate. To ensure the user returns to your application automatically once bank authorization is finished, you must configure **Android App Links**.
+
+> **Note:** Contact the FormBuilder team to receive your assigned `{MERCHANT_SLUG}`.
+
+### 1. Add Intent Filters to `AndroidManifest.xml`
+In your app module's `AndroidManifest.xml`, add the following intent filters inside your main/host `<activity>` (e.g. `MainActivity`):
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:launchMode="singleTask"
+    android:exported="true">
+    
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+
+    <!-- FormBuilder Callback Redirect (Development) -->
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" 
+              android:host="dev3.kyc.rbbt.dev" 
+              android:pathPrefix="/iris-redirect/{MERCHANT_SLUG}" />
+    </intent-filter>
+
+    <!-- FormBuilder Callback Redirect (Production) -->
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" 
+              android:host="id.rbbt.dev" 
+              android:pathPrefix="/iris-redirect/{MERCHANT_SLUG}" />
+    </intent-filter>
+</activity>
+```
+
+### 2. Digital Asset Links Verification
+For Android to verify the domain automatically without prompting the user with an "Open with..." dialog:
+* Provide your app's **Package Name** (`applicationId`) and your **Release SHA-256 certificate fingerprint** to the FormBuilder team so they can add it to the server's `assetlinks.json`.
+* Ensure `android:launchMode="singleTask"` or `singleTop` is set on the host activity so returning from the browser resumes the existing task instead of creating a duplicate instance.
+
